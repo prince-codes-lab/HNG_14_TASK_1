@@ -25,9 +25,9 @@ const mongoose = require('mongoose');
 let isConnected = false;
 
 const connect_db = async () => {
-    if (isConnected) {
-        return;
-    }
+    // if (isConnected) {
+    //     return;
+    // }
 
     try {
         const db = await mongoose.connect(process.env.MONGO_URI);
