@@ -22,8 +22,19 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/profiles', profileRoutes);
 
-app.use('*splat', (req, res) => {
+// because of serverless with vercel, let's comment this line
+
+/*app.use('*splat', (req, res) => {
     return res.status(404).json({
+        status: "error",
+        message: "Endpoint not found"
+    });
+});
+*/
+//..............................
+
+app.use((req, res) => {
+    res.status(404).json({
         status: "error",
         message: "Endpoint not found"
     });
@@ -57,7 +68,7 @@ const connectOnce = async () => {
 // 🔑 Export handler for Vercel
 module.exports = async (req, res) => {
     await connectOnce();
-    return serverless(app)(req, res);
+    return app(req, res);
 };
 
 
