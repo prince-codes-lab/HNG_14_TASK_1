@@ -5,6 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const profileRoutes = require('./router/profiles');
 const connect_db = require('./db');
+const serverless = require('serverless-http');
 
 // const corsConfig = {
     
@@ -28,19 +29,37 @@ app.use('*splat', (req, res) => {
     });
 });
 
+// my normal traditional server start code
+
+// const start = async () => {
 
 
-const start = async () => {
+//     await connect_db();
+//     app.listen(PORT, () => {
+//         console.log(`Server is running on port ${PORT}`);
+//     });
+// }
+
+// start();
+
+// let's go serverless
+
+// 🔑 Connect DB once (important for serverless)
+let isConnected = false;
+
+const connectOnce = async () => {
+    if (!isConnected) {
+        await connect_db();
+        isConnected = true;
+    }
+};
+
+// 🔑 Export handler for Vercel
+module.exports = async (req, res) => {
+    await connectOnce();
+    return serverless(app)(req, res);
+};
 
 
-    await connect_db();
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
-}
-
-start();
-
-module.exports = app;
 // API endpoint to create data      
 
