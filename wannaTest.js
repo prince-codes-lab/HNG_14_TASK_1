@@ -52,4 +52,9 @@
 git remote add origin https://github.com/prince-codes-lab/HNG_14_TASK_1.git
 git branch -M main
 git push -u origin main
+
+
+
+
+npx plugins add vercel/vercel-plugin
 */

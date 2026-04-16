@@ -40,5 +40,7 @@ const start = async () => {
 }
 
 start();
+
+module.exports = app;
 // API endpoint to create data      
 
