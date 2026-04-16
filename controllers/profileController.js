@@ -24,8 +24,10 @@ const createProfile =  async (req, res, next) => {
 
     const cleanName = name.trim().toLowerCase();
 
+ 
 
-    const name_Exists = await Profile.findOne({name: cleanName}, {_id: 0, __v: 0});
+    try{
+            const name_Exists = await Profile.findOne({name: cleanName}, {_id: 0, __v: 0});
 
     if(name_Exists){
         return res.status(200).json({
@@ -34,9 +36,6 @@ const createProfile =  async (req, res, next) => {
             data: name_Exists.toObject()
         })
     }
- 
-
-    try{
 
         const  [genderRes, agifyRes, nationalizeRes] = await Promise.all([
             fetch(`https://api.genderize.io?name=${encodeURIComponent(cleanName)}`),
@@ -51,22 +50,22 @@ const createProfile =  async (req, res, next) => {
         ]);
 
         if (!genderData.gender || genderData.count === 0 ) {
-            throw {code: 502, api: 'genderize'};
+            throw {code: 502, api: 'Genderize'};
         }
 
             if (!ageData.age || ageData.count === 0 ) {
-            throw {code: 502, api: 'agify'};
+            throw {code: 502, api: 'Agify'};
         }
-
-            if (!nationalityData.country || nationalityData.country.length === 0 ) {
-            throw {code: 502, api: 'nationalize'};
-        }
+// ✅ Only check what the task specifies
+        if (ageData.age === null || ageData.age === undefined) {
+    throw { code: 502, api: 'Agify' };
+            };
 
         const classify_age = ageData.age > 0 && ageData.age <= 12 ? "child" : 
         ageData.age > 12 && ageData.age <= 19 ? "teenager" : 
         ageData.age > 19 && ageData.age <= 59 ? "adult" : ageData.age > 59 ? "senior" : "unknown" ;
 
-
+    
 
         const classify_nationality = nationalityData.country.reduce((highest, current) => {
             return current.probability > highest.probability ?  current : highest;
@@ -92,18 +91,13 @@ const createProfile =  async (req, res, next) => {
             data: newProfile
      });
 
-        
-
-        
-
-
     }
 
     catch(err){
             if(err.code === 502){
                 return res.status(502).json({
                     status: "error",
-                    message: `Failed to fetch data from ${err.api} API`
+                    message: `${err.api} returned an invalid response`
                 });
              }
             console.error('POST /api/profiles error', err);
@@ -114,6 +108,13 @@ const createProfile =  async (req, res, next) => {
     }
 
 };
+
+
+
+
+
+
+
 
 // get all profiles with optional filters
 const getAllProfiles = async (req, res, next) => {
