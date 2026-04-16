@@ -49,6 +49,13 @@ const createProfile =  async (req, res, next) => {
             nationalizeRes.json()
         ]);
 
+        console.log('GENDERIZE:', JSON.stringify(genderData));
+        console.log('AGIFY:', JSON.stringify(ageData));
+        console.log('NATIONALIZE:', JSON.stringify(nationalityData));
+
+
+
+
         if (!genderData.gender || genderData.count === 0 ) {
             throw {code: 502, api: 'Genderize'};
         }
