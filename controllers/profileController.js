@@ -53,9 +53,7 @@ const createProfile =  async (req, res, next) => {
             throw {code: 502, api: 'Genderize'};
         }
 
-            if (!ageData.age || ageData.count === 0 ) {
-            throw {code: 502, api: 'Agify'};
-        }
+
 // ✅ Only check what the task specifies
         if (ageData.age === null || ageData.age === undefined) {
     throw { code: 502, api: 'Agify' };
@@ -65,7 +63,9 @@ const createProfile =  async (req, res, next) => {
         ageData.age > 12 && ageData.age <= 19 ? "teenager" : 
         ageData.age > 19 && ageData.age <= 59 ? "adult" : ageData.age > 59 ? "senior" : "unknown" ;
 
-    
+                    if (!nationalityData.country || nationalityData.country.length === 0) {
+                    throw { code: 502, api: 'Nationalize' };
+                    }
 
         const classify_nationality = nationalityData.country.reduce((highest, current) => {
             return current.probability > highest.probability ?  current : highest;
@@ -135,6 +135,8 @@ const getAllProfiles = async (req, res, next) => {
 
        // { _id: 0 } tells MongoDB not to return the internal _id field
     const profiles = await Profile.find(filter, { _id: 0 });
+
+    // profiles.toJSON();
 
     return res.status(200).json({
         status: "success",
