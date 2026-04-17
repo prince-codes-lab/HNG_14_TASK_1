@@ -4,9 +4,117 @@ const {uuidv7} = require('uuidv7');
 
 const createProfile =  async (req, res, next) => {
 
-       console.log("POST HIT");
-    return res.json({ working: true });
+const {name} = req.body;
 
+    if(name === undefined || name === null || String(name).trim() === ""){
+        return res.status(400).json({
+            status: "error",
+            message: "Name is required and cannot be empty"
+        });
+    }
+
+
+        // Check if name is the wrong type (e.g. someone sent a number)
+    if (typeof name !== 'string') {
+      return res.status(422).json({
+        status: 'error',
+        message: 'Invalid type',
+      });
+    }
+
+    const cleanName = name.trim().toLowerCase();
+
+ 
+
+    try{
+            const name_Exists = await Profile.findOne({name: cleanName}, {_id: 0, __v: 0});
+
+    if(name_Exists){
+        return res.status(200).json({
+            status: "success",
+            message: "Profile already exists",
+            data: name_Exists.toObject()
+        })
+    }
+
+        const  [genderRes, agifyRes, nationalizeRes] = await Promise.all([
+            console.log("Incoming POST:", cleanName),
+            fetch(`https://api.genderize.io?name=${encodeURIComponent(cleanName)}`),
+
+            fetch(`https://api.agify.io?name=${encodeURIComponent(cleanName)}`),
+            fetch(`https://api.nationalize.io?name=${encodeURIComponent(cleanName)}`)        
+        ]);
+
+        const [genderData, ageData, nationalityData] = await Promise.all([
+            genderRes.json(),
+            agifyRes.json(),
+            nationalizeRes.json()
+        ]);
+
+        console.log('GENDERIZE:', JSON.stringify(genderData));
+        console.log('AGIFY:', JSON.stringify(ageData));
+        console.log('NATIONALIZE:', JSON.stringify(nationalityData));
+
+
+
+
+        if (!genderData.gender || genderData.count === 0 ) {
+            throw {code: 502, api: 'Genderize'};
+        }
+
+
+// ✅ Only check what the task specifies
+        if (ageData.age === null || ageData.age === undefined) {
+    throw { code: 502, api: 'Agify' };
+            };
+
+        const classify_age = ageData.age > 0 && ageData.age <= 12 ? "child" : 
+        ageData.age > 12 && ageData.age <= 19 ? "teenager" : 
+        ageData.age > 19 && ageData.age <= 59 ? "adult" : ageData.age > 59 ? "senior" : "unknown" ;
+
+                    if (!nationalityData.country || nationalityData.country.length === 0) {
+                    throw { code: 502, api: 'Nationalize' };
+                    }
+
+        const classify_nationality = nationalityData.country.reduce((highest, current) => {
+            return current.probability > highest.probability ?  current : highest;
+        });
+
+        const newProfile = {
+            id: uuidv7(),
+            name: cleanName,
+            gender: genderData.gender,
+            gender_probability: genderData.probability,
+            sample_size: genderData.count,  // "count" in Genderize = sample_size
+            age: ageData.age,
+            age_group: classify_age,
+            country_id: classify_nationality.country_id,
+            country_probability: classify_nationality.probability,
+            created_at: new Date().toISOString()
+        }
+
+        await Profile.create(newProfile);
+
+        return res.status(201).json({
+            status: "success",
+            data: newProfile
+     });
+
+    }
+
+    catch(err){
+            if(err.code === 502){
+                return res.status(502).json({
+                    status: "error",
+                    message: `${err.api} returned an invalid response`
+                });
+             }
+            console.error('POST /api/profiles error', err);
+            return res.status(500).json({
+                status: "error",
+                message: "An unexpected error occurred while creating the profile"
+            });
+    }
 };
 
 
@@ -136,125 +244,6 @@ const deleteProfileById = async (req, res, next) => {
 module.exports = {createProfile, getAllProfiles, getProfileById, deleteProfileById};
 
 /*
-
-
-
-
-const {name} = req.body;
-
-    if(name === undefined || name === null || String(name).trim() === ""){
-        return res.status(400).json({
-            status: "error",
-            message: "Name is required and cannot be empty"
-        });
-    }
-
-
-        // Check if name is the wrong type (e.g. someone sent a number)
-    if (typeof name !== 'string') {
-      return res.status(422).json({
-        status: 'error',
-        message: 'Invalid type',
-      });
-    }
-
-    const cleanName = name.trim().toLowerCase();
-
- 
-
-    try{
-            const name_Exists = await Profile.findOne({name: cleanName}, {_id: 0, __v: 0});
-
-    if(name_Exists){
-        return res.status(200).json({
-            status: "success",
-            message: "Profile already exists",
-            data: name_Exists.toObject()
-        })
-    }
-
-        const  [genderRes, agifyRes, nationalizeRes] = await Promise.all([
-            console.log("Incoming POST:", cleanName),
-            fetch(`https://api.genderize.io?name=${encodeURIComponent(cleanName)}`),
-
-            fetch(`https://api.agify.io?name=${encodeURIComponent(cleanName)}`),
-            fetch(`https://api.nationalize.io?name=${encodeURIComponent(cleanName)}`)        
-        ]);
-
-        const [genderData, ageData, nationalityData] = await Promise.all([
-            genderRes.json(),
-            agifyRes.json(),
-            nationalizeRes.json()
-        ]);
-
-        console.log('GENDERIZE:', JSON.stringify(genderData));
-        console.log('AGIFY:', JSON.stringify(ageData));
-        console.log('NATIONALIZE:', JSON.stringify(nationalityData));
-
-
-
-
-        if (!genderData.gender || genderData.count === 0 ) {
-            throw {code: 502, api: 'Genderize'};
-        }
-
-
-// ✅ Only check what the task specifies
-        if (ageData.age === null || ageData.age === undefined) {
-    throw { code: 502, api: 'Agify' };
-            };
-
-        const classify_age = ageData.age > 0 && ageData.age <= 12 ? "child" : 
-        ageData.age > 12 && ageData.age <= 19 ? "teenager" : 
-        ageData.age > 19 && ageData.age <= 59 ? "adult" : ageData.age > 59 ? "senior" : "unknown" ;
-
-                    if (!nationalityData.country || nationalityData.country.length === 0) {
-                    throw { code: 502, api: 'Nationalize' };
-                    }
-
-        const classify_nationality = nationalityData.country.reduce((highest, current) => {
-            return current.probability > highest.probability ?  current : highest;
-        });
-
-        const newProfile = {
-            id: uuidv7(),
-            name: cleanName,
-            gender: genderData.gender,
-            gender_probability: genderData.probability,
-            sample_size: genderData.count,  // "count" in Genderize = sample_size
-            age: ageData.age,
-            age_group: classify_age,
-            country_id: classify_nationality.country_id,
-            country_probability: classify_nationality.probability,
-            created_at: new Date().toISOString()
-        }
-
-        await Profile.create(newProfile);
-
-        return res.status(201).json({
-            status: "success",
-            data: newProfile
-     });
-
-    }
-
-    catch(err){
-            if(err.code === 502){
-                return res.status(502).json({
-                    status: "error",
-                    message: `${err.api} returned an invalid response`
-                });
-             }
-            console.error('POST /api/profiles error', err);
-            return res.status(500).json({
-                status: "error",
-                message: "An unexpected error occurred while creating the profile"
-            });
-    }
-
-
-
-
 
 
 
