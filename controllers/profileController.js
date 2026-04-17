@@ -38,9 +38,7 @@ const {name} = req.body;
     }
 
         const  [genderRes, agifyRes, nationalizeRes] = await Promise.all([
-            console.log("Incoming POST:", cleanName),
             fetch(`https://api.genderize.io?name=${encodeURIComponent(cleanName)}`),
-
             fetch(`https://api.agify.io?name=${encodeURIComponent(cleanName)}`),
             fetch(`https://api.nationalize.io?name=${encodeURIComponent(cleanName)}`)        
         ]);
@@ -112,6 +110,7 @@ const {name} = req.body;
             console.error('POST /api/profiles error', err);
             return res.status(500).json({
                 status: "error",
+                stack: err.stack,
                 message: "An unexpected error occurred while creating the profile"
             });
     }
